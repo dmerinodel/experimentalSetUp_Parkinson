@@ -1,5 +1,5 @@
 # experimentalSetUp_Parkinson
-RESNET0 Model.
+RESNET50 Model.
 Code ready to run after some prerequisites:
 
 - Create folders named datasets, figures and results at the same level as the scripts.
