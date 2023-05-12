@@ -16,61 +16,50 @@ import parkinsonClassification.dataug as dataug
 
 # Antes de nada nos vamos a quedar con los nombres de los pacientes que van en
 # train-test-val
-excel_path = 'datasets/PreTrain_VoicePat_ds/PreTrain_metadata.xlsx'
+excel_path = 'datasets/SVD_stable_ds/SVD_metadata.xlsx'
 names = pd.read_excel(excel_path)
-names = names[['Identificador', 'Genero']]
+names = names[['Identificador']]
 names['classID'] = [0 if 'C' in name else 1 for name in names['Identificador']]
-
-# Primero vamos a separar en hombres y mujeres
-names_m = names[names['Genero'] == 0]
-names_f = names[names['Genero'] == 1]
 
 # Ahora vamos a extraer la muestra estratificada. Muestreamos para 90-10.
 # Primero nombres de entrenamiento
-train_names_m = names_m.groupby('classID', group_keys=False).apply(lambda x: x.sample(frac=0.9))
-train_names_f = names_f.groupby('classID', group_keys=False).apply(lambda x: x.sample(frac=0.9))
-train_names = pd.concat([train_names_m, train_names_f], ignore_index=True)
-
-# Comprobaciones
-tms = len(train_names[(train_names['Genero'] == 0) & (train_names['classID'] == 0)])
-tme = len(train_names[(train_names['Genero'] == 0) & (train_names['classID'] == 1)])
-tfs = len(train_names[(train_names['Genero'] == 1) & (train_names['classID'] == 0)])
-tfe = len(train_names[(train_names['Genero'] == 1) & (train_names['classID'] == 1)])
+train_names = names.groupby('classID', group_keys=False).apply(lambda x: x.sample(frac=0.9))
+train_names = pd.concat([train_names, train_names], ignore_index=True).drop_duplicates(keep='first')
+print(train_names)
+tenf = len(train_names[(train_names['classID'] == 0)])
+tsan = len(train_names[(train_names['classID'] == 1)])
 
 # Eliminamos del total
-names_m = pd.concat([names_m, train_names_m]).drop_duplicates(keep=False)
-names_f = pd.concat([names_f, train_names_f]).drop_duplicates(keep=False)
+names = pd.concat([names, train_names]).drop_duplicates(keep=False)
 
 # Ahora nombres de validación
-val_names = pd.concat([names_m, names_f], ignore_index=True)
+val_names = pd.concat([names, names], ignore_index=True).drop_duplicates(keep='first')
 
 # Comprobaciones
-vms = len(val_names[(val_names['Genero'] == 0) & (val_names['classID'] == 0)])
-vme = len(val_names[(val_names['Genero'] == 0) & (val_names['classID'] == 1)])
-vfs = len(val_names[(val_names['Genero'] == 1) & (val_names['classID'] == 0)])
-vfe = len(val_names[(val_names['Genero'] == 1) & (val_names['classID'] == 1)])
+vms = len(val_names[(val_names['classID'] == 0)])
+vme = len(val_names[(val_names['classID'] == 1)])
 
+print(train_names)
+print(val_names)
 print('Train: ', len(train_names))
-print(f'Hombres sanos: {tms} - Hombres enfermos {tme}')
-print(f'Mujeres sanas: {tfs} - Mujeres enfermas {tfe}')
+print(f'Sanos: {tsan} - Enfermos {tenf}')
 print('Val: ', len(val_names))
-print(f'Hombres sanos: {vms} - Hombres enfermos {vme}')
-print(f'Mujeres sanas: {vfs} - Mujeres enfermas {vfe}')
+print(f'Sanos: {vms} - Enfermos {vme}')
 
 # ----------------------------
 # Preparando datos de entrenamiento desde los metadatos
 # ----------------------------
-download_path = 'datasets/PreTrain_VoicePat_ds/'
+download_path = 'datasets/SVD_stable_ds/'
 
 # Leemos archivo de metadatos
-metadata_file = os.path.join(download_path, 'metadata/PreTrain_metadata.csv')
+metadata_file = os.path.join(download_path, 'metadata/SVD_metadata.csv')
 df = pd.read_csv(metadata_file)
 
 # Construimos el path de los archivos añadiendo el nombre de las carpetas
 df['relative_path'] = '/' + df['fold'].astype(str) + '/' + df['RECORDING_ORIGINAL_NAME'].astype(str) + '.wav'
 
 # Nos quedamos con las columnas que importan
-df = df[['relative_path', 'classID', 'sex']]
+df = df[['relative_path', 'classID']]
 
 # Ahora vamos a quedarnos con las grabaciones correspondientes a los nombres
 # seleccionados en train, val y test.
@@ -93,12 +82,18 @@ print('Sanos: ', len(df_val[df_val['classID'] == 0]))
 print('Enfermos: ', len(df_val[df_val['classID'] == 1]))
 
 # Aumento de datos
-data_path = 'datasets/PreTrain_VoicePat_ds/A'
+data_path = 'datasets/SVD_stable_ds/A'
 dataug.make_dirs(data_path)
-aug_df_train = dataug.slide_and_save(df_train, data_path)
+inicio = time.time()
+aug_df_train = dataug.slide_and_save(df_train, data_path, gender = False)
+fin = time.time()
+print(f'Tiempo en recortar audios train: {(fin-inicio)/60}')
 print(aug_df_train.head())
 # Necesario aumentar tambien val, y despues seleccionar
-aug_df_val = dataug.slide_and_save(df_val, data_path)
+inicio = time.time()
+aug_df_val = dataug.slide_and_save(df_val, data_path, gender = False)
+fin = time.time()
+print(f'Tiempo en recortar audios val: {(fin-inicio)/60}')
 print(aug_df_val.head())
 
 # Recuperamos los nombres de cada audio, necesarios para generar los espectrogramas
@@ -109,7 +104,7 @@ names_aug_val = aug_df_val['relative_path'].str.split('/', expand=True)[2]
 # ------------------------------------------------------------
 # Creamos las carpetas donde vamos a organizar las imágenes
 # ------------------------------------------------------------
-ruta_imgs = 'datasets/PreTrain_VoicePat_ds/organized'
+ruta_imgs = 'datasets/SVD_stable_ds/organized'
 
 os.makedirs(os.path.join(ruta_imgs, 'train', 'control'))
 os.makedirs(os.path.join(ruta_imgs, 'train', 'patologicas'))
@@ -129,28 +124,28 @@ inicio = time.time()
 for name in names_aug_train:
     # Accedemos al path relativo y lo guardamos como string
     rel_path = aug_df_train[aug_df_train['relative_path'].str.contains(name)]['relative_path'].astype(str).values[0][1:]
-    ruta_aud = os.path.join(new_data_path, rel_path)
+    if 'w8' in rel_path:
+        ruta_aud = os.path.join(new_data_path, rel_path)
+        name_img = name.split('.')[0] + '.png'
 
-    name_img = name.split('.')[0] + '.png'
+        if 'control' in ruta_aud:
+            ruta_img = os.path.join(ruta_img_train_c, name_img)
+        else:
+            ruta_img = os.path.join(ruta_img_train_p, name_img)
 
-    if 'control' in ruta_aud:
-        ruta_img = os.path.join(ruta_img_train_c, name_img)
-    else:
-        ruta_img = os.path.join(ruta_img_train_p, name_img)
+        # Leemos y generamos espectrograma
+        samples, sample_rate = librosa.load(ruta_aud, sr=44100)
+        sgram = librosa.stft(samples)
+        sgram_mag, _ = librosa.magphase(sgram)
+        mel_scale_sgram = librosa.feature.melspectrogram(S=sgram_mag, sr=sample_rate, n_fft=2048, n_mels=256)
+        mel_sgram = librosa.amplitude_to_db(mel_scale_sgram, ref=np.min)
 
-    # Leemos y generamos espectrograma
-    samples, sample_rate = librosa.load(ruta_aud, sr=44100)
-    sgram = librosa.stft(samples)
-    sgram_mag, _ = librosa.magphase(sgram)
-    mel_scale_sgram = librosa.feature.melspectrogram(S=sgram_mag, sr=sample_rate, n_fft=2048, n_mels=256)
-    mel_sgram = librosa.amplitude_to_db(mel_scale_sgram, ref=np.min)
-
-    # Pintamos para guardar
-    fig, ax = plt.subplots()
-    img = disp.specshow(mel_sgram, sr=sample_rate, ax=ax)
-    ax.set_axis_off()
-    fig.savefig(ruta_img, transparent=True, bbox_inches='tight', pad_inches=0)
-    plt.close()
+        # Pintamos para guardar
+        fig, ax = plt.subplots()
+        img = disp.specshow(mel_sgram, sr=sample_rate, ax=ax)
+        ax.set_axis_off()
+        fig.savefig(ruta_img, transparent=True, bbox_inches='tight', pad_inches=0)
+        plt.close()
 final = time.time()
 print(f'Tiempo para generar los espectrogramas de entrenamiento: {(final - inicio) / 60}')
 
@@ -245,7 +240,7 @@ os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
 # Entrenamos
 # -------------------------
 use_cuda = torch.cuda.is_available()
-n_epochs = 100
+n_epochs = 2
 print('GPU:', use_cuda)
 inicio = time.time()
 loss_dict, model = train(n_epochs=n_epochs,
@@ -257,6 +252,10 @@ loss_dict, model = train(n_epochs=n_epochs,
 final = time.time()
 train_time = (final - inicio) / 60
 print(f'Ha tardado {train_time} minutos.')
+
+# Exportamos el modelo
+save_path = 'models/pretrain.pt'
+torch.save(myModel.state_dict(), save_path)
 
 fig = plt.figure(figsize=(16, 9))
 plt.plot(loss_dict["valid"])

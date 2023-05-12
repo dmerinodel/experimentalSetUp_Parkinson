@@ -209,8 +209,9 @@ dataloaders = {'train': DataLoader(train_data, batch_size=batch_size, shuffle=Tr
 # ---------------------------------------------------------------
 # Importamos el modelo con los pesos preentrenados en ImageNet
 # ---------------------------------------------------------------
-myModel = resnet50(weights=ResNet50_Weights.DEFAULT)
-#myModel = resnet50()
+#myModel = resnet50(weights=ResNet50_Weights.DEFAULT)
+myModel = resnet50()
+
 # Nuevo MLP del final
 mlp = [nn.Linear(in_features=2048, out_features=1024, bias=True), nn.Dropout(0.5), nn.PReLU(),
        nn.Linear(in_features=1024, out_features=512, bias=True), nn.Dropout(0.5), nn.PReLU(),
@@ -219,6 +220,10 @@ mlp = nn.Sequential(*mlp)
 
 # La modificamos
 myModel.fc = mlp
+
+# CARGAMOS PESOS PRETRAIN
+weights = torch.load('models/pretrain.pt')
+myModel.load_state_dict(weights)
 
 # Definimos la función de salida y el algoritmo de aprendizaje
 criterion = nn.CrossEntropyLoss()

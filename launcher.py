@@ -2,6 +2,8 @@ from os import system
 import time
 
 ini = time.time()
+#print('--- PRE-TRAIN SVD ---')
+#system('python3 pretrain.py')
 print('--- EXPERIMENTO UEX ---')
 system('python3 uex.py')
 print('Borramos datos usados ...')
