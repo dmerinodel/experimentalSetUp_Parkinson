@@ -92,8 +92,12 @@ def sliding_window(audio_path, data_path='', lapse=0.5, step=0.1):
 # Esta función recorre el dataset y hace dos cosas: recortar audio y guardar
 # cada recorte (llamada a sliding_window) y guardar el path de los recortes.
 # ----------------------------
-def slide_and_save(df, data_path):
-    new_df = pd.DataFrame(columns=['relative_path', 'classID', 'sex'])
+def slide_and_save(df, data_path, gender = True):
+    if gender:
+        new_df = pd.DataFrame(columns=['relative_path', 'classID', 'sex'])
+    else:
+        new_df = pd.DataFrame(columns=['relative_path', 'classID'])
+
     print('Aumentando datos ...')
     for row in df.iloc:
         # Path absoluto del archivo de audio - concatena la carpeta del audio con el
@@ -103,8 +107,10 @@ def slide_and_save(df, data_path):
 
         # Toma el ID de la clase
         class_id = row['classID']
-        # Toma el género del paciente
-        gender = row['sex']
+        if gender:
+            # Toma el género del paciente
+            gender = row['sex']
+
         # Crea las ventanas
         windows = sliding_window(audio_file, data_path)
 
